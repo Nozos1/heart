@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Heart Canvas</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #000;
+      overflow: hidden;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+    #text {
+  position: fixed;
+  top: 8%;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ff3b3b;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  font-size: clamp(24px, 5vw, 48px);
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-shadow: 0 0 12px rgba(255,0,0,0.6);
+  pointer-events: none; /* nie blokuje canvas */
+  user-select: none;
+}
+
+#counter {
+  position: fixed;
+  top: 14%;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #aaa;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  font-size: clamp(12px, 3.5vw, 16px);
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+  user-select: none;
+  pointer-events: none;
+}
+
+  </style>
+</head>
+<body>
+
+<div id="text">Jestem tu </div>
+<canvas id="c"></canvas>
+
+<script>
+(() => {
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d", { alpha: false });
+
+  let W, H, dpr;
+
+  function resize() {
+    dpr = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+    W = Math.floor(window.innerWidth * dpr);
+    H = Math.floor(window.innerHeight * dpr);
+    canvas.width = W;
+    canvas.height = H;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    clear();
+  }
+
+  function clear() {
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  window.addEventListener("resize", resize);
+
+  function heartPoint(t, scale) {
+    const s = Math.sin(t);
+    const c = Math.cos(t);
+    const x = 16 * s * s * s;
+    const y = 13 * c - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+    return { x: x * scale, y: -y * scale };
+  }
+
+  let rays = 1200;
+  let i = 0;
+  let growthK = 0;
+  const growthSteps = 18;
+
+  function drawRayStep(theta) {
+    const scale = Math.min(W, H) / 40;
+    const cx = W / 2;
+    const cy = H / 2;
+
+    const p = heartPoint(theta, scale);
+
+    const k1 = growthK / growthSteps;
+    const k2 = (growthK + 1) / growthSteps;
+
+    ctx.strokeStyle = "#ff0000";
+    ctx.lineWidth = 1.2 * dpr;
+
+    ctx.beginPath();
+    ctx.moveTo(cx + p.x * k1, cy + p.y * k1);
+    ctx.lineTo(cx + p.x * k2, cy + p.y * k2);
+    ctx.stroke();
+
+    growthK++;
+    if (growthK >= growthSteps) {
+      growthK = 0;
+      i++;
+    }
+  }
+
+  const STEPS_PER_FRAME = 25; // 🔥 ZWIĘKSZAJ = SZYBCIEJ
+
+function animate() {
+  for (let s = 0; s < STEPS_PER_FRAME; s++) {
+    if (i >= rays) return;
+    const theta = Math.PI * 2 * (i / rays);
+    drawRayStep(theta);
+  }
+  requestAnimationFrame(animate);
+  }
+
+// ===== VIEW COUNTER =====
+// Zmień nazwę "twoj-nick/heart" na coś unikalnego
+fetch("https://api.countapi.xyz/hit/twoj-nick-heart/visits")
+  .then(res => res.json())
+  .then(data => {
+    const el = document.getElementById("counter");
+    if (el) el.textContent = `Otworzenia: ${data.value}`;
+  })
+  .catch(() => {
+    const el = document.getElementById("counter");
+    if (el) el.textContent = "Otworzenia: —";
+  });
+
+
+
+  resize();
+  animate();
+})();
+
+</script>
+
+</body>
+</html>
